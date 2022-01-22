@@ -49,6 +49,7 @@ class TrackNetLoader(data.Dataset):
         label_all = []
         for i in range(3):
             x = Image.open(img_path[i]).convert('RGB')
+            b = Image.open(bgr_path[i])
             x = x.resize((WIDTH, HEIGHT))
 
             # 归一化，变成float64了
@@ -58,7 +59,8 @@ class TrackNetLoader(data.Dataset):
 
             img_all.append(x[0])
             img_all.append(x[1])
-            img_all.append(x[2])
+            #  img_all.append(x[2])
+            img_all.append(b)
 
             y = Image.open(label_path[i])
             y = np.asarray(y) / 255.0
