@@ -8,14 +8,15 @@ import numpy as np
 from PIL import Image
 
 
-HEIGHT=288
-WIDTH=512
-mag = 1
-sigma = 2.5
+HEIGHT     = 288
+WIDTH      = 512
+mag        = 1
+sigma      = 2.5
+n_in_n_out = 3
 
 def genHeatMap(w, h, cx, cy, r, mag):
     if cx < 0 or cy < 0:
-      return np.zeros((h, w))
+        return np.zeros((h, w))
     x, y = np.meshgrid(np.linspace(1, w, w), np.linspace(1, h, h))
     heatmap = ((y - (cy + 1))**2) + ((x - (cx + 1))**2)
     heatmap[heatmap <= r**2] = 1
@@ -24,9 +25,9 @@ def genHeatMap(w, h, cx, cy, r, mag):
 
 
 def getData(mode):
-        img = pd.read_csv('tracknet_{}_list_x_3.csv'.format(mode))
-        label = pd.read_csv('tracknet_{}_list_y_3.csv'.format(mode))
-        return np.squeeze(img.values), np.squeeze(label.values)
+    img   = pd.read_csv('tracknet_{}_list_x_3.csv'.format(mode))
+    label = pd.read_csv('tracknet_{}_list_y_3.csv'.format(mode))
+    return np.squeeze(img.values), np.squeeze(label.values)
 
 class TrackNetLoader(data.Dataset):
     def __init__(self, root, mode):
@@ -44,12 +45,13 @@ class TrackNetLoader(data.Dataset):
 
     def __getitem__(self, index):
         img_path = self.img_name[index]
+        bg_path  = self.img_name[index] + '_bg'
         label_path = self.label_name[index]
         img_all = []
         label_all = []
-        for i in range(3):
-            x = Image.open(img_path[i]).convert('RGB')
-            b = Image.open(bgr_path[i])
+        for id_of_Unit in range(n_in_n_out):
+            x = Image.open(img_path[id_of_Unit]).convert('RGB')
+            b = Image.open( bg_path[id_of_Unit])
             x = x.resize((WIDTH, HEIGHT))
 
             # 归一化，变成float64了
@@ -62,7 +64,7 @@ class TrackNetLoader(data.Dataset):
             #  img_all.append(x[2])
             img_all.append(b)
 
-            y = Image.open(label_path[i])
+            y = Image.open(label_path[id_of_Unit])
             y = np.asarray(y) / 255.0
             label_all.append(y)
 
