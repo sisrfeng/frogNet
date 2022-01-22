@@ -1,0 +1,14 @@
+**/.vscode
+**/*.mp4
+**/*.png
+**/*.jpg
+**/*.jpng
+**/*acc_*Pre*Rec*
+
+**/exp
+exp*
+old_exp本来在3-3RGB下的exp
+
+
+**/data/*
+

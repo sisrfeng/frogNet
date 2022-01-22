@@ -1,0 +1,147 @@
+import torch
+import argparse
+from torch.utils.data import TensorDataset, DataLoader
+import torchvision.models as models
+from TrackNet10 import TrackNet10
+import dataloader10
+import numpy as np
+from dataloader10 import TrackNetLoader
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix
+import itertools
+import cv2
+import math
+
+
+parser = argparse.ArgumentParser(description = 'Pytorch TrackNet6')
+parser.add_argument('--batchsize', type = int, default = 8, help = 'input batch size for training (defalut: 8)')
+parser.add_argument('--epochs', type = int, default = 30, help = 'number of epochs to train (default: 30)')
+parser.add_argument('--lr', type = float, default = 1, help = 'learning rate (default: 1)')
+parser.add_argument('--tol', type = int, default = 4, help = 'tolerance values (defalut: 4)')
+parser.add_argument('--optimizer', type = str, default = 'Ada', help = 'Adam or SGD (default: Ada)')
+parser.add_argument('--momentum', type = float, default = 0.9, help = 'momentum fator (default: 0.9)')
+parser.add_argument('--weight_decay', type = float, default = 5e-4, help = 'weight decay (default: 5e-4)')
+parser.add_argument('--seed', type=int, default = 1, help = 'random seed (default: 1)')
+parser.add_argument('--load_weight', type = str, default = None, help = 'the weight you want to retrain')
+args = parser.parse_args()
+
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+print('GPU Use : ',torch.cuda.is_available())
+test_data = TrackNetLoader('' , 'Test')
+test_loader = DataLoader(dataset = test_data, batch_size=args.batchsize, shuffle=False)
+
+def outcome(y_pred, y_true, tol):
+	n = y_pred.shape[0]
+	i = 0
+	TP = TN = FP1 = FP2 = FN = 0
+	while i < n:
+		for j in range(10):
+			if torch.max(y_pred[i][j]) == 0 and torch.max(y_true[i][j]) == 0:
+				TN += 1
+			elif torch.max(y_pred[i][j]) > 0 and torch.max(y_true[i][j]) == 0:
+				FP2 += 1
+			elif torch.max(y_pred[i][j]) == 0 and torch.max(y_true[i][j]) > 0:
+				FN += 1
+			elif torch.max(y_pred[i][j]) > 0 and torch.max(y_true[i][j]) > 0:
+				h_pred = (y_pred[i][j] * 255).cpu().numpy()
+				h_true = (y_true[i][j] * 255).cpu().numpy()
+				h_pred = h_pred.astype('uint8')
+				h_true = h_true.astype('uint8')
+				#h_pred
+				(cnts, _) = cv2.findContours(h_pred.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+				rects = [cv2.boundingRect(ctr) for ctr in cnts]
+				max_area_idx = 0
+				max_area = rects[max_area_idx][2] * rects[max_area_idx][3]
+				for j in range(len(rects)):
+					area = rects[j][2] * rects[j][3]
+					if area > max_area:
+						max_area_idx = j
+						max_area = area
+				target = rects[max_area_idx]
+				(cx_pred, cy_pred) = (int(target[0] + target[2] / 2), int(target[1] + target[3] / 2))
+
+				#h_true
+				(cnts, _) = cv2.findContours(h_true.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+				rects = [cv2.boundingRect(ctr) for ctr in cnts]
+				max_area_idx = 0
+				max_area = rects[max_area_idx][2] * rects[max_area_idx][3]
+				for j in range(len(rects)):
+					area = rects[j][2] * rects[j][3]
+					if area > max_area:
+						max_area_idx = j
+						max_area = area
+				target = rects[max_area_idx]
+				(cx_true, cy_true) = (int(target[0] + target[2] / 2), int(target[1] + target[3] / 2))
+				dist = math.sqrt(pow(cx_pred-cx_true, 2)+pow(cy_pred-cy_true, 2))
+				if dist > tol:
+					FP1 += 1
+				else:
+					TP += 1
+		i += 1
+	return (TP, TN, FP1, FP2, FN)
+
+def evaluation(TP, TN, FP1, FP2, FN):
+	try:
+		accuracy = (TP + TN) / (TP + TN + FP1 + FP2 + FN)
+	except:
+		accuracy = 0
+	try:
+		precision = TP / (TP + FP1 + FP2)
+	except:
+		precision = 0
+	try:
+		recall = TP / (TP + FN)
+	except:
+		recall = 0
+	return (accuracy, precision, recall)
+
+def WBCE(y_pred, y_true):
+	eps = 1e-7
+	loss = (-1)*(torch.square(1 - y_pred) * y_true * torch.log(torch.clamp(y_pred, eps, 1)) + torch.square(y_pred) * (1 - y_true) * torch.log(torch.clamp(1 - y_pred, eps, 1)))
+	return torch.mean(loss)
+
+def display(TP, TN, FP1, FP2, FN):
+	print('======================Evaluate=======================')
+	print("Number of true positive:", TP)
+	print("Number of true negative:", TN)
+	print("Number of false positive FP1:", FP1)
+	print("Number of false positive FP2:", FP2)
+	print("Number of false negative:", FN)
+	(accuracy, precision, recall) = evaluation(TP, TN, FP1, FP2, FN)
+	print("Accuracy:", accuracy)
+	print("Precision:", precision)
+	print("Recall:", recall)
+	print('=====================================================')
+
+def test():
+	model.eval()
+	print('======================Evaluate=======================')
+	TP = TN = FP1 = FP2 = FN = 0
+	for batch_idx, (data, label) in enumerate(test_loader):
+		data = data.type(torch.FloatTensor).to(device)
+		label = label.type(torch.FloatTensor).to(device)
+		with torch.no_grad():
+			y_pred = model(data)
+		y_pred = y_pred > 0.5
+		(tp, tn, fp1, fp2, fn) = outcome(y_pred, label, args.tol)
+		TP += tp
+		TN += tn
+		FP1 += fp1
+		FP2 += fp2
+		FN += fn
+		print('Test : [{}/{} ({:.0f}%)]'.format((batch_idx+1) * len(data), len(test_loader.dataset),100.0 * (batch_idx+1) / len(test_loader)))
+	display(TP, TN, FP1, FP2, FN)
+
+model = TrackNet10()
+model.to(device)
+if args.optimizer == 'Ada':
+	optimizer = torch.optim.Adadelta(model.parameters(), lr=args.lr, rho=0.9, eps=1e-06, weight_decay=0)
+	#optimizer = torch.optim.Adam(model.parameters(), lr = args.lr, weight_decay = args.weight_decay)
+else:
+	optimizer = torch.optim.SGD(model.parameters(), lr = args.lr, weight_decay = args.weight_decay, momentum = args.momentum)
+
+if(args.load_weight):
+	checkpoint = torch.load(args.load_weight)
+	model.load_state_dict(checkpoint['state_dict'])
+	epoch = checkpoint['epoch']
+test()
