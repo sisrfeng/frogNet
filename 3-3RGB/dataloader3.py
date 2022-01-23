@@ -76,21 +76,3 @@ class TrackNetLoader(data.Dataset):
             img = img.transpose(Image.FLIP_LEFT_RIGHT)
         '''
         return img_all, label_all
-
-'''
-img = pd.read_csv('tracknet_train_list_x.csv')
-label = pd.read_csv('tracknet_train_list_y.csv')
-img = np.squeeze(img.values)
-label = np.squeeze(label.values)
-
-img_path = img[0]
-label_path = label[0]
-img_all = []
-label_all = []
-
-img_all = np.asarray(img_all)
-label_all = np.asarray(label_all)
-img_all = (img_all/255)
-print((img_all))
-print((label_all).shape)
-'''
