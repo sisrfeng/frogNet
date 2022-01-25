@@ -6,6 +6,7 @@ from torch.utils import data
 import numpy as np
 
 from PIL import Image
+from preprocess3 import genHeatMap
 
 
 HEIGHT     = 288
@@ -14,14 +15,6 @@ mag        = 1
 sigma      = 2.5
 n_in_n_out = 3
 
-def genHeatMap(w, h, cx, cy, r, mag):
-    if cx < 0 or cy < 0:
-        return np.zeros((h, w))
-    x, y = np.meshgrid(np.linspace(1, w, w), np.linspace(1, h, h))
-    heatmap = ((y - (cy + 1))**2) + ((x - (cx + 1))**2)
-    heatmap[heatmap <= r**2] = 1
-    heatmap[heatmap > r**2] = 0
-    return heatmap*mag
 
 
 def getData(mode):

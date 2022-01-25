@@ -1,8 +1,12 @@
-#没文件调用本py文件
+# 没文件调用本py文件
+# 本文件作用: 1. outputfile.write("%s,%s,%s\n"%(train_x[i][0], train_x[i][1], train_x[i][2]))
+            # 2. 根据gt, 生成data/match某/heatmap
+
+
 import numpy as np
-import os
 from glob import glob
 import pandas as pd
+import os
 import cv2
 
 HEIGHT=288
@@ -14,10 +18,10 @@ def genHeatMap(w, h, cx, cy, r, mag):
     if cx < 0 or cy < 0:
         return np.zeros((h, w))
     x, y = np.meshgrid(np.linspace(1, w, w), np.linspace(1, h, h))
-	# 距离的平方
+    # 距离的平方
     heatmap = ((y - (cy + 1))**2) + ((x - (cx + 1))**2)
     heatmap[heatmap <= r**2] = 1
-    heatmap[heatmap > r**2]  = 0
+    heatmap[heatmap > r**2] = 0
     return heatmap * mag
 
 vdo_path ='/data/wf/badminton_tracknet_v2/'
@@ -51,9 +55,9 @@ for game in game_list:
         r2 = os.path.join(vdo_path, game, 'heatmap', p)
         x_data_tmp = []
         y_data_tmp = []
-		# 3 in  , last 2 frame have no index i
+        # 3 in  , last 2 frame have no index i
         for i in range(num-2):
-			# ------------------3 frame as 1 unit -------------
+            # ------------------3 frame as 1 unit -------------
             unit = []
             for j in range(3):
                 #  每张图都会考虑上 后面2张
@@ -67,7 +71,7 @@ for game in game_list:
                 heatmap_path = os.path.join(r2, target)
                 if v[i+j] == 0:
                     heatmap_img = genHeatMap(WIDTH, HEIGHT, -1, -1, sigma, mag)
-                                    #return np.zeros((h, w))
+                                  # return np.zeros((h, w))
                 else:
                     heatmap_img = genHeatMap(WIDTH, HEIGHT, int(x[i+j]/ratio), int(y[i+j]/ratio), sigma, mag)
                 heatmap_img *= 255
