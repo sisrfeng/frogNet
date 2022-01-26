@@ -5,7 +5,7 @@ from  time import perf_counter as dida
 
 di = dida()
 
-cap = cv2.VideoCapture('./1_02_00.mp4')
+cap = cv2.VideoCapture('/home/wf/3/data/match1/rally_video/1_02_01.mp4')
 p_thre = 20  # p_thre表示像素阈值
 i = 0
 saved = 1

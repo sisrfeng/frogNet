@@ -24,18 +24,22 @@ def genHeatMap(w, h, cx, cy, r, mag):
     heatmap[heatmap > r**2] = 0
     return heatmap * mag
 
-vdo_path ='/data/wf/badminton_tracknet_v2/'
-# game_list = ['match'+str(i) for i in range(1,27) ]
-game_list = ['test_match'+str(i) for i in range(1,4) ]
-#
-#  ratio =cv2.imread( os.path.join(vdo_path + 'match1/frame/1_01_00/1.png')).shape[0] / HEIGHT
-ratio =cv2.imread( os.path.join(vdo_path + 'test_match1/frame/1_05_02/516.png')).shape[0] / HEIGHT
+#  vdo_path ='/data/wf/badminton_tracknet_v2/'
+vdo_path ='./'
+#  game_list = ['match'+str(i) for i in range(1,27) ]
+game_list = ['match'+str(i) for i in range(1,2) ]
+#  game_list = ['test_match'+str(i) for i in range(1,4) ]
+
+#  ratio_W_H =cv2.imread( os.path.join(vdo_path + 'match1/frame/1_01_00/1.png')).shape[0] / HEIGHT
+ratio_W_H =cv2.imread( os.path.join(vdo_path, '1_02_01/1.png') ).shape[0] / HEIGHT
 
 
 train_x = []
 train_y = []
 for game in game_list:
-    all_path = glob(os.path.join(vdo_path, game, 'frame', '*'))
+    #  all_path = glob(  os.path.join(vdo_path, game, 'frame', '*')  )
+    #todo: 这行只是临时的
+    all_path = glob(  os.path.join(vdo_path, 'frame', '*')  )
     train_path = all_path[:int(len(all_path)*1)]
     for i in range(len(train_path)):
         train_path[i] = train_path[i].split('/')[-1]
@@ -73,7 +77,7 @@ for game in game_list:
                     heatmap_img = genHeatMap(WIDTH, HEIGHT, -1, -1, sigma, mag)
                                   # return np.zeros((h, w))
                 else:
-                    heatmap_img = genHeatMap(WIDTH, HEIGHT, int(x[i+j]/ratio), int(y[i+j]/ratio), sigma, mag)
+                    heatmap_img = genHeatMap(WIDTH, HEIGHT, int(x[i+j]/ratio_W_H), int(y[i+j]/ratio_W_H), sigma, mag)
                 heatmap_img *= 255
                 unit.append(heatmap_path)
                 cv2.imwrite(heatmap_path,heatmap_img)
